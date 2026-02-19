@@ -125,7 +125,7 @@ if st.button("Enregistrer les données"):
 
         # 5. Récupération des résultats
         with st.spinner("Extraction des résultats..."):
-            ws_res = sh.get_get_worksheet(1) 
+            ws_res = sh.worksheet("test python")
             
             def afficher_tableau_pro(data, titre):
                 if not data:
