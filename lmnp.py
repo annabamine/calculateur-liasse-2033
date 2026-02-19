@@ -3,34 +3,7 @@ from streamlit_gsheets import GSheetsConnection
 import gspread 
 import pandas as pd
 from fpdf import FPDF
-import base64
 
-# --- FONCTION POUR METTRE LE LOGO EN FOND ---
-def add_bg_from_local(image_file):
-    with open(image_file, "rb") as image_file:
-        encoded_string = base64.b64encode(image_file.read())
-    st.markdown(
-        f"""
-        <style>
-        .stApp {{
-            background-image: url("data:image/png;base64,{encoded_string.decode()}");
-            background-attachment: fixed;
-            background-size: 400px; /* Taille du logo */
-            background-repeat: no-repeat;
-            background-position: bottom right; /* Position en bas à droite */
-            opacity: 0.1; /* Transparence très faible pour l'effet filigrane */
-        }}
-        </style>
-        """,
-        unsafe_allow_html=True
-    )
-
-# Appelle la fonction avec le nom de ton fichier logo
-# (Assure-toi que le logo est bien dans ton dossier GitHub)
-try:
-    add_bg_from_local('logo.png') 
-except:
-    pass
 
 # 1. Configuration de la page
 st.set_page_config(page_title="Calculateur Liasses fiscales 2033", layout="wide")
