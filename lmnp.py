@@ -60,18 +60,20 @@ def create_pdf(p1, p2, p3, p4, p5):
 
 # 5. Logique principale
 if st.button("Enregistrer et Calculer"):
-    temp_sheet_id = None
+    temp_ws_name = f"TEMP_{int(time.time())}"
+    sh = None
     try:
         creds = st.secrets["connections"]["gsheets"]
         gc = gspread.service_account_from_dict(creds)
+        sh = gc.open_by_key(MASTER_ID)
         
-        with st.spinner("Création de l'espace isolé..."):
-            timestamp = int(time.time())
-            new_copy = gc.copy(MASTER_ID, title=f"TEMP_{timestamp}")
-            temp_sheet_id = new_copy.id
-            sh = gc.open_by_key(temp_sheet_id)
-            worksheet = sh.worksheet("test python")
-
+        with st.spinner("Création de votre session sécurisée..."):
+            # 1. On duplique l'ONGLET de calcul, pas le fichier entier
+            # Cela évite l'erreur de quota Drive
+            master_ws = sh.worksheet("test python")
+            temp_ws = sh.duplicate_sheet(master_ws.id, new_sheet_name=temp_ws_name)
+            
+            # 2. On écrit les données dans cet onglet UNIQUE
             date_str = debut_activite.strftime("%d/%m/%Y")
             updates = [
                 {'range': 'B4', 'values': [[prix_achat]]}, {'range': 'B5', 'values': [[frais_notaire]]},
@@ -82,22 +84,27 @@ if st.button("Enregistrer et Calculer"):
                 {'range': 'B93', 'values': [[amort_excedentaires]]}, {'range': 'B98', 'values': [[deficits_anterieurs]]},
                 {'range': 'B103', 'values': [[dispo_anterieurs]]}
             ]
-            worksheet.batch_update(updates)
+            temp_ws.batch_update(updates)
 
-        with st.spinner("Extraction..."):
-            ws_res = sh.get_worksheet(1)
-            p1, p2, p3, p4, p5 = ws_res.get('A109:G124'), ws_res.get('A129:E144'), ws_res.get('A151:I158'), ws_res.get('A162:I169'), ws_res.get('A178:C182')
-            
-            st.success("✅ Calcul terminé !")
+        with st.spinner("Calcul des résultats isolés..."):
+            # 3. Récupération (ajuste l'index si tes résultats sont sur un autre onglet spécifique)
+            # Ici on récupère les données calculées dans l'onglet temporaire
+            p1, p2, p3, p4, p5 = temp_ws.get('A109:G124'), temp_ws.get('A129:E144'), temp_ws.get('A151:I158'), temp_ws.get('A162:I169'), temp_ws.get('A178:C182')
+
+            st.success("✅ Calcul terminé sans conflit !")
             st.dataframe(pd.DataFrame(p2), use_container_width=True)
 
             pdf_out = create_pdf(p1, p2, p3, p4, p5)
-            st.download_button("📥 Télécharger PDF", data=pdf_out, file_name=f"liasse_{timestamp}.pdf", mime="application/pdf")
+            st.download_button("📥 Télécharger PDF", data=pdf_out, file_name=f"liasse_{temp_ws_name}.pdf", mime="application/pdf")
 
     except Exception as e:
         st.error(f"Erreur : {e}")
-    finally:
-        if temp_sheet_id:
-            try: gc.del_spreadsheet(temp_sheet_id)
-            except: pass
 
+    finally:
+        # 4. On nettoie l'onglet temporaire pour ne pas encombrer le fichier
+        if sh and temp_ws_name:
+            try:
+                ws_to_del = sh.worksheet(temp_ws_name)
+                sh.del_worksheet(ws_to_del)
+            except:
+                pass
