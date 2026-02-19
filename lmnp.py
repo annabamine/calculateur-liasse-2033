@@ -142,7 +142,7 @@ if st.button("Enregistrer les données"):
 
         # 5. Récupération des résultats
         with st.spinner("Extraction des résultats..."):
-            ws_res = sh.worksheet("test python")
+            ws_res = sh.worksheet("test1")
             
             def afficher_tableau_pro(data, titre):
                 if not data:
