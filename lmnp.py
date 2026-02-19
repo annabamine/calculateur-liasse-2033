@@ -13,7 +13,6 @@ url_master = st.secrets["connections"]["gsheets"]["spreadsheet"]
 MASTER_ID = url_master.split("/d/")[1].split("/")[0]
 
 st.title("🏠 Calculateur des liasses fiscales 2033")
-st.write("Mode sécurisé : Une copie temporaire est créée pour chaque calcul.")
 
 # 3. Formulaire de saisie
 tab1, tab2, tab3 = st.tabs(["🏗️ Acquisition & Travaux", "💰 Exploitation (Annuelle)", "📉 Antériorité & Report"])
