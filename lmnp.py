@@ -120,7 +120,7 @@ if st.button("Enregistrer les données"):
         date_str = debut_activite.strftime("%d/%m/%Y") if debut_activite else ""
 
         # 4. Écriture directe dans l'onglet Master
-        worksheet = sh.worksheet("test python")
+        worksheet = sh.worksheet("test1")
         worksheet.update_acell('B4', prix_achat)
         worksheet.update_acell('B5', frais_notaire)
         worksheet.update_acell('B6', frais_agence)
