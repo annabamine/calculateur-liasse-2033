@@ -42,76 +42,68 @@ with tab3:
     deficits_anterieurs = st.number_input("Déficits ANTÉRIEURS (€)", min_value=0, value=0)
     dispo_anterieurs = st.number_input("Disponibilité Antérieurs (€)", min_value=0, value=0)
 
+from fpdf import FPDF
+
 def create_pdf(p1, p2, p3, p4, p5):
-    pdf = FPDF(orientation='L', unit='mm', format='A4') # Mode Paysage pour plus de place
+    # Orientation Paysage ('L') pour maximiser la largeur
+    pdf = FPDF(orientation='L', unit='mm', format='A4')
     pdf.set_auto_page_break(auto=True, margin=15)
     
-    def ajouter_page_tableau(titre, data):
+    def ajouter_page_tableau(titre, data, largeurs_manuelles=None):
         pdf.add_page()
         pdf.set_font("helvetica", 'B', 14)
         pdf.cell(0, 10, txt=titre, ln=True, align='C')
         pdf.ln(5)
         
-        if not data:
-            return
+        if not data: return
 
-        # Calcul automatique de la largeur des colonnes
-        # On divise les 270mm utilisables par le nombre de colonnes trouvées
+        # On définit les largeurs : soit manuelles, soit automatiques
         nb_cols = len(data[0])
-        col_width = 270 / nb_cols
-        
-        pdf.set_font("helvetica", size=7) # Police petite pour que tout rentre
+        if largeurs_manuelles:
+            col_widths = largeurs_manuelles
+        else:
+            col_widths = [270 / nb_cols] * nb_cols # 270mm est la largeur utile en paysage
+
+        pdf.set_font("helvetica", size=7)
         
         for row in data:
-            # On récupère la position Y de départ pour la ligne
             start_y = pdf.get_y()
-            max_row_height = 0
+            clean_row = [str(item).replace('"', '') if item is not None else "" for item in row]
             
-            # 1. On calcule d'abord la hauteur nécessaire pour cette ligne
-            # (pour que les bordures soient jolies)
-            row_heights = []
-            for item in row:
-                # On simule le texte pour voir combien de lignes il prend
-                text = str(item).replace('"', '') if item is not None else ""
-                lines = pdf.multi_cell(col_width, 5, txt=text, split_only=True)
-                row_heights.append(len(lines) * 5)
+            # Calcul de la hauteur de la ligne en fonction du texte le plus long
+            h_list = [len(pdf.multi_cell(col_widths[i], 5, txt=clean_row[i], split_only=True)) * 5 
+                      for i in range(min(len(clean_row), len(col_widths)))]
+            line_h = max(h_list) if h_list else 5
             
-            line_h = max(row_heights) if row_heights else 5
-            
-            # 2. On dessine les cellules une par une
-            for item in row:
-                curr_x = pdf.get_x()
-                text = str(item).replace('"', '') if item is not None else ""
+            curr_x = pdf.get_x()
+            for i in range(min(len(clean_row), len(col_widths))):
+                # Dessin de la cellule
+                pdf.rect(curr_x, start_y, col_widths[i], line_h)
+                pdf.multi_cell(col_widths[i], 5, txt=clean_row[i], align='L')
                 
-                # On dessine le rectangle de fond pour la structure
-                pdf.rect(curr_x, start_y, col_width, line_h)
-                
-                # On écrit le texte
-                pdf.multi_cell(col_width, 5, txt=text, align='L')
-                
-                # On se replace pour la colonne suivante
-                pdf.set_xy(curr_x + col_width, start_y)
+                # Déplacement vers la colonne suivante
+                curr_x += col_widths[i]
+                pdf.set_xy(curr_x, start_y)
             
-            # On passe à la ligne suivante
             pdf.ln(line_h)
 
-    # Appels simplifiés (le code calcule les largeurs tout seul)
+    # --- APPELS DES SECTIONS ---
+
+    # Page 1 : Bilan (Auto)
     ajouter_page_tableau("PAGE 1 : BILAN", p1)
+
+    # PAGE 2 : COMPTE DE RÉSULTAT (CORRECTION ICI)
+    # On réduit la colonne 1 (libellés) à 90mm au lieu de 150mm
+    # On laisse de la place pour les codes (20mm) et les montants (4 colonnes de 40mm)
     ajouter_page_tableau("PAGE 2 : COMPTE DE RÉSULTAT", p2, largeurs_manuelles=[90, 20, 40, 40, 40, 40])
+
+    # Pages suivantes (Auto)
     ajouter_page_tableau("PAGE 3 : IMMOBILISATIONS", p3)
     ajouter_page_tableau("PAGE 3 : AMORTISSEMENTS", p4)
     ajouter_page_tableau("PAGE 4 : SUIVI DES DÉFICITS", p5)
     
     return pdf.output()
 
-    # Pages du PDF
-    ajouter_page_tableau("PAGE 1 : BILAN", p1, [90, 20, 40, 40])
-    ajouter_page_tableau("PAGE 2 : COMPTE DE RÉSULTAT", p2, [150, 20, 33, 33, 34])
-    ajouter_page_tableau("PAGE 3 : IMMOBILISATIONS", p3, [70, 30, 30, 30, 30])
-    ajouter_page_tableau("PAGE 3 : AMORTISSEMENTS", p4, [70, 30, 30, 30, 30])
-    ajouter_page_tableau("PAGE 4 : DÉFICITS", p5, [130, 60])
-    
-    return pdf.output()
 
 if st.button("Enregistrer les données"):
     try:
